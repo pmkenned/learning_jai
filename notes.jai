@@ -19,8 +19,12 @@ main :: () {
     // If an initial value is unspecified, it will be the default value:
     assert(my_int2 == 0);
 
+    // Unless you specifically indicate that it should be unitialized:
+    my_int3 : int = ---;
+
     // If the type is unspecified, it will be inferred:
     my_float := 1.0;
+    assert(type_of(my_float) == float);
 
     // Here is the list of integer types:
     //  u8  s8  : unsigned and signed 8 bit
@@ -92,31 +96,260 @@ main :: () {
     my_u16 = 256;
     // my_u8 = cast(u8) my_u16; // would generate a run-time error
 
+    // On the subject of casting, xx does an automatic casting
+    my_u16 = 5;
+    my_u8 = xx my_u16; // same as cast(u8) in this case
+
+    // Use print() to output text. To print variables, use %.
+    print("my_u8: %\n", my_u8);
+
+    // Mismatching the number of % will result in a compile error
+    //print("%\n");
+
+    // Printing line number
+    print("%\n", #location().line_number);
+
+    // The # indicates something that will execute during compilation
+    // For example, the #run directive causes this fibonacci number to be calculated during compilation
+    print("%\n", #run fib(90));
+
+    // Private functions are allowed
+    fib :: (n : int) -> int {
+        a, b := 1;
+        for i : 1..n {
+            t := a;
+            a = b;
+            b += t;
+        }
+        return a;
+    }
+
+    // Arrays
+
+    // There are a few kinds of arrays: static arrays, array views, and resizable arrays
+
+    // We'll start with static arrays
+    xs : [3] int;
+    xs[0] = 2;
+    xs[1] = 1;
+    xs[2] = 3;
+
+    // Arrays know how long they are
+    print("xs has % items\n", xs.count);
+
+    // So this would be a compile-time error, unlike in C
+    // xs[3] = 4;
+
+    // You can iterate over an array like this:
+    for x : xs {
+        print("%\n", x);
+    }
+
+    // With only one statement in the body of the loop, the curly braces are optional
+    // And we can use default variable names it and it_index
+    for xs print("xs[%]: %\n", it_index, it);
+
+    // Another way to do the loop (note the range is inclusive)
+    for i : 0..xs.count-1 {
+        print("xs[%]: %\n", i, xs[i]);
+    }
+
+    // Array literal syntax
+    xs = int.[1, 2, 3];
+
+    // Because the type of xs has already been declared, the type of the literal can be inferred
+    xs = .[4, 5, 6];
+    // ys := .[1, 2, 3]; // the type would be required here, though, since it cannot be inferred
+
+    // Next, array views. They are declared with this syntax:
+    ys : [] int;
+
+    // Like static arrays, array views have a count and data pointer
+    ys = xs; // this sets the count and and data pointer to match xs
+    assert(ys.count == xs.count);
+    assert(ys.data == xs.data);
+
+    // Print knows how to print an array, by the way
+    print("ys: %\n", ys);
+
+    // Unlike with static arrays, we can modify the count and data pointers for array views
+    // For example, this will make the array view just look at the last two elements of xs
+    ys.data += 1; // pointer arithmetic similar to C
+    ys.count -= 1;
+    print("ys: %\n", ys);
+
+    // Array views are also useful in that static arrays implicitly cast to them
+    // So we can write a procedure that accepts static arrays of any length:
+    sum :: (xs : [] int) -> int {
+        sum := 0;
+        for xs sum += it;
+        return sum;
+    }
+
+    print("sum xs: %\n", sum(xs));
+    print("sum ys: %\n", sum(ys));
+
+    // Lastly, resizable arrays. They are declared with this syntax:
+    zs : [..] int;
+
+    // Adding some elements to the resizable array (the * gets a pointer to zs)
+    for 1..3 array_add(*zs, it);
+
+    // Resizable arrays are dynamically allocated, so in addition to a count and data
+    // pointer, they also have a capacity
+    print("%\n", zs.allocated);
+
+    // Resizable arrays also implicitly cast to array views, so we can use our same
+    // sum procedure from above:
+    print("%\n", sum(zs));
+
+    // The implicit casting of [..] to [] is made possible by the fact that the two
+    // have common data layout.
+
+    // Pointers
+
+    // NOTE: The syntax for pointers differs from C!
+    // In C, the * is used to dereference and it is used to declare a pointer type, while &
+    // is used to get the address of something:
+    //  int * xp = &x;
+    // In Jai, the * is still used to declare a pointer type, but it is also used to get
+    // the address of something (which is more consistent if you think about it):
+    int_ptr : *int = *my_int; // (the type could be inferred but making it explicit here)
+    my_int4 := <<int_ptr; // And << is used to dereference
+
+    // Strings
+
+    my_string : string = "hello!";
+    print("'%' is %\n", my_string, my_string.count);
+
+    // Structs types are declared using this syntax:
+    Vector3 :: struct {
+        x : float;
+        y : float;
+        z : float;
+    }
+
+    // struct literal syntax is the same as array literal syntax
+    my_vec3 := Vector3.{1, 2, 3};
+
+    // print also knows how to print structs
+    print("my_vec3: %\n", my_vec3);
+
+    // Can specify field values by name, others will use default values
+    my_vec3b := Vector3.{ y=1 };
+    print("my_vec3b: %\n", my_vec3b);
+
+    // structs can specify the default values for their fields
+    Employee :: struct {
+        name : string = "John Smith";
+        salary : int = 100000;
+        years_employed : int; // default will be 0
+
+        // struct types can be anonymous
+        // here, misc is an instance of an anonymous struct
+        misc : struct {
+            id : int;
+            building: int;
+        }
+
+        // this is an anonymous instance of an anonymous struct!
+        // in which case the members can be referred to directly
+        struct {
+            vacation_days : int;
+            vacation_used : int;
+        }
+    }
+
+    // This will use the default values:
+    new_employee : Employee = .{};
+    print("%\n", new_employee);
+
+    // Here, some default values can be overridden
+    new_employee2 : Employee = .{
+        name = "Harry Truman",
+        misc.id = 2,
+        vacation_days = 15
+    };
+    print("%\n", new_employee2);
+
+    // block scopes can be introduced with curly braces
+    {
+        // using will allow you to refer directly to the field names
+        // of a struct
+        using my_vec3;
+        x += 1;
+        y *= 2;
+        z -= 1;
+        print("%\n", my_vec3);
+
+        // using can apply to a sub-struct
+        using new_employee.misc;
+        print("id: % building: %\n", id, building);
+
+        // you can also use using on a struct type (as opposed to an instance of a struct)
+        using Employee;
+        print("%\n", type_of(name));
+    }
+
+    // Polymorphic procedures
+
+    // The $ indicates we're introducing a compile-time known type
+    // Only one T should have the $.
+    my_min :: (a : $T, b : T) -> T {
+        if a < b
+            return a;
+        return b;
+    }
+
+    assert(my_min(2, 3) == 2);
+    assert(my_min(2.1, 2.2) == 2.1);
+    assert(my_min(2.1, 3) == 2.1); // the type for 3 will be inferred as float
+    assert(my_min(2.1, cast(float) my_int) == 2.1); // explicit cast required
+
+    // When defining polymorphic procedures, a separate concrete procedure is created
+    // for each unique set of types, which we'll demonstrate below
+
+    // You can use #procedure_of_call to get the procedure that *would* be called
+    // given the arguments provided
+    my_func_ptr1 := #procedure_of_call my_min(2, 3);
+    my_func_ptr2 := #procedure_of_call my_min(2.1, 2.2);
+    my_func_ptr3 := #procedure_of_call my_min(2.1, 3);
+    my_func_ptr4 := #procedure_of_call my_min(2.1, cast(float) my_int);
+
+    // Notice that the addresses of the functions with the same types are the same
+    print("% %\n", my_func_ptr1, type_of(my_func_ptr1));
+    print("% %\n", my_func_ptr2, type_of(my_func_ptr2));
+    print("% %\n", my_func_ptr3, type_of(my_func_ptr3));
+    print("% %\n", my_func_ptr4, type_of(my_func_ptr4));
+
+    // The #bake_constants directive can be used to specify one or more compile-time constants
+    // In this case, we give a name to a concrete representation of my_min
+    min_ints :: #bake_constants my_min(T=int);
+    print("% %\n", min_ints, type_of(min_ints));
+
+    // Similarly, #bake_arguments can be used to specify one or more arguments
+    min_of_x_and_100 := #bake_arguments min_ints(b=100);
+    assert(min_of_x_and_100(50) == 50);
+    assert(min_of_x_and_100(200) == 100);
+
+    // named arguments, default arguments, multiple return values
+
+    // variadic functions and Any type
+
+    // defer
+
+    // context
+
     // TODO:
-    //  xx
-    //  run-time and compile-time errors
-    //  #location
-    //  polymorphic function
-    //  for loops, it, it_index
-    //  arrays
-    //  array views
-    //  resizable arrays, array_add
-    //  casting [..] to []
-    //  pointers
     //  strings
-    //  .count, sprint
+    //  .data, .count, sprint
     //  String_Builder
     //   init_string_builder
     //   append
     //   builder_string_length
     //   print_to_builder
     //   builder_to_string
-    //  s.data, s.count
     //  #string
-    //  structs
-    //   defaults
-    //   using
-    //   literals, .{, .[
     //  multiple return values, like out parameters
     //  ifx
     //  ---
@@ -124,7 +357,6 @@ main :: () {
     //  #as
     //  $T: Type
     //  defer
-    //  <<
     //  case
     //  default arguments
     //  enum
@@ -135,9 +367,11 @@ main :: () {
     //  New(), NewArray()
     //  #must
     //  context, push_context
+    //  context.print_style.default_format_struct.use_long_form_if_more_than_this_many_members = 0;
     //  *void
     //  #c_call
     //  Temporary_Storage, reset_temporary_storage
+    //  polymorphic structs
 
     // Things to learn about:
     //  #place

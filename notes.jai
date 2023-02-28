@@ -1,4 +1,5 @@
 #import "Basic";
+#import "String";
 
 main :: () {
 
@@ -110,8 +111,10 @@ main :: () {
     print("%\n", #location().line_number);
 
     // The # indicates something that will execute during compilation
-    // For example, the #run directive causes this fibonacci number to be calculated during compilation
+    // For example, the #run directive below causes this fibonacci number to be calculated during compilation
     print("%\n", #run fib(90));
+    // This will compile result into program as if you had written print("%\n", 4660046610375530309);
+    // Anything you can program at runtime, you can also program at compile-time
 
     // Private functions are allowed
     fib :: (n : int) -> int {
@@ -178,16 +181,24 @@ main :: () {
     ys.count -= 1;
     print("ys: %\n", ys);
 
-    // Array views are also useful in that static arrays implicitly cast to them
-    // So we can write a procedure that accepts static arrays of any length:
+    // Array views are also useful in that static arrays implicitly cast to them, which
+    // means we can write a procedure that accepts static arrays of any length
+    // Note that static arrays do not "decay" to pointers as they do in C, so the procedure
+    // still knows how many elements in the array without needing a separate parameter
     sum :: (xs : [] int) -> int {
         sum := 0;
         for xs sum += it;
         return sum;
     }
 
-    print("sum xs: %\n", sum(xs));
-    print("sum ys: %\n", sum(ys));
+    assert(sum(xs) == 15);
+    assert(sum(ys) == 11);
+
+    // Note that the size of a static array is the size of all the elements, as in C
+    assert(size_of([10] int) == size_of(int)*10);
+    // But the size of an array view is always 16 since it contains an 8 byte count
+    // and an 8 byte data pointer
+    assert(size_of([] int) == 16);
 
     // Lastly, resizable arrays. They are declared with this syntax:
     zs : [..] int;
@@ -220,9 +231,56 @@ main :: () {
     // Strings
 
     my_string : string = "hello!";
-    print("'%' is %\n", my_string, my_string.count);
+    print("'%' is % bytes long, at %\n", my_string, my_string.count, my_string.data);
 
-    // Structs types are declared using this syntax:
+    // You can think of strings as actually just being [] u8
+    for cast([] u8) my_string
+        print("% ", it);
+    print("\n");
+
+    // As such, strings are similar to C strings in that they do not require any heap
+    // allocations. The compiler places the string in program memory and the string
+    // simply points to it
+    my_string2 := "good morning";
+
+    // We can do all the normal things that we can do with array views
+    my_string2.data += 5;
+    my_string2.count -= 5;
+    assert(my_string2 == "morning"); // == operator is overloaded to do string compare
+
+    // Note that strings are not nul-terminated as in C since the count makes that unnecessary.
+    //
+    // This makes it much easier to make substrings without modifying the original string (as would
+    // happen with strtok() in C) or allocating new strings (as would happen in most other languages)
+    //
+    // In this example, we use split() from the String module to tokenize a string. Note that
+    // the resulting substrings are just array views onto the original string, we are not
+    // allocating new strings.
+    s1 := "hello, how are you?";
+    words := split(s1, " ");
+    for words print("% %\n", it, it.count);
+    // Of course, space does have to be allocated for the array views themselves since there can
+    // be an arbitrary number of substrings. If you consult the documentation in
+    // modules/String/module.jai, you'll see that it uses "temporary storage" to perform this
+    // allocation. More on that later.
+
+    // Though strings do not need to be nul-terminated, to make C interop more convenient,
+    // string literals are automatically suffixed with a nul byte.
+    assert(<<(s1.data + s1.count) == 0);
+    // This means you can pass them to functions that expect C-strings
+
+    // TODO: sprint
+    // TODO: String_Builder
+    //   init_string_builder
+    //   append
+    //   builder_string_length
+    //   print_to_builder
+    //   builder_to_string
+    // TODO: #string
+
+    // Structs
+
+    // struct types are declared using this syntax:
     Vector3 :: struct {
         x : float;
         y : float;
@@ -291,6 +349,14 @@ main :: () {
         print("%\n", type_of(name));
     }
 
+    // TODO: procedures
+    //  named arguments
+    //  default arguments
+    //  named return values
+    //  multiple return values
+    //  default return values
+    //  variadic procedures
+
     // Polymorphic procedures
 
     // The $ indicates we're introducing a compile-time known type
@@ -332,51 +398,31 @@ main :: () {
     assert(min_of_x_and_100(50) == 50);
     assert(min_of_x_and_100(200) == 100);
 
-    // named arguments, default arguments, multiple return values
+    // TODO: polymorphic structs
 
-    // variadic functions and Any type
+    // TODO: defer
 
-    // defer
-
-    // context
+    // TODO: context
+    //  context, push_context
+    //  context.print_style.default_format_struct.use_long_form_if_more_than_this_many_members = 0;
 
     // TODO:
-    //  strings
-    //  .data, .count, sprint
-    //  String_Builder
-    //   init_string_builder
-    //   append
-    //   builder_string_length
-    //   print_to_builder
-    //   builder_to_string
-    //  #string
-    //  multiple return values, like out parameters
     //  ifx
-    //  ---
     //  operator overloading
     //  #as
     //  $T: Type
-    //  defer
     //  case
-    //  default arguments
     //  enum
-    //  named-arguments and return values
-    //  variadic functions, ..
     //  Any type
-    //  Default return values
     //  New(), NewArray()
     //  #must
-    //  context, push_context
-    //  context.print_style.default_format_struct.use_long_form_if_more_than_this_many_members = 0;
     //  *void
     //  #c_call
     //  Temporary_Storage, reset_temporary_storage
-    //  polymorphic structs
 
     // Things to learn about:
     //  #place
     //  #insert, SoA, AoS
-    //  #bake_arguments
     //  #modify
     //  #expand
     //  remove

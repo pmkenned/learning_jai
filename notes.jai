@@ -293,9 +293,12 @@ main :: () {
     // print also knows how to print structs
     print("my_vec3: %\n", my_vec3);
 
-    // Can specify field values by name, others will use default values
-    my_vec3b := Vector3.{ y=1 };
-    print("my_vec3b: %\n", my_vec3b);
+    // As in C, you can assign structs
+    my_vec3b := my_vec3;
+
+    // Can specify field values by name. Omitted fields will get default values
+    my_vec3c := Vector3.{ y=1 };
+    print("my_vec3c: %\n", my_vec3c);
 
     // structs can specify the default values for their fields
     Employee :: struct {
@@ -316,6 +319,15 @@ main :: () {
             vacation_days : int;
             vacation_used : int;
         }
+
+        favorites : Favortes;
+        favorites.color = "red"; // can specify defaults of sub-structs
+    }
+
+    Favortes :: struct {
+        color : string;
+        flavor : string;
+        movie : string;
     }
 
     // This will use the default values:
@@ -333,7 +345,7 @@ main :: () {
     // block scopes can be introduced with curly braces
     {
         // using will allow you to refer directly to the field names
-        // of a struct
+        // of a struct (applies only in current scope)
         using my_vec3;
         x += 1;
         y *= 2;
@@ -347,6 +359,75 @@ main :: () {
         // you can also use using on a struct type (as opposed to an instance of a struct)
         using Employee;
         print("%\n", type_of(name));
+    }
+
+    // As in C, data layout of structs is well-defined and predictable
+    // A struct has the same address as the address of its first member
+    assert(cast(*void) *new_employee == cast(*void) *new_employee.name);
+
+    // This makes it possible to cast between different struct types that
+    // have common fields. For example:
+
+    Base :: struct {
+        x: int = 2;
+    }
+
+    Derived :: struct {
+        x : int = 3;
+        f : float = 1;
+    }
+
+    d : Derived;
+    inc_x_on_base(cast(*Base) *d); // we'll see how to obviate the pointer cast
+    assert(d.x == 4);
+
+    inc_x_on_base :: (bp : *Base) {
+        // you can use . on struct pointers, don't need -> syntax
+        bp.x += 1;
+    }
+
+    // It would be cumbersome and error-prone if we had to manually make sure
+    // that the base and derived structs stayed in-sync
+    // using makes this easy:
+
+    Derived2 :: struct {
+        using base : Base; // can now refer directly to fields of Base
+        x = 4; // can override Base's defaults
+        f : float;
+    }
+
+    Derived3 :: struct {
+        using base : Base;
+        s : string;
+    }
+
+    d2 : Derived2;
+    d2.base.x += 1;
+    d2.x += 1; // can omit base because of using
+    assert(d2.x == 6);
+
+    // We can eliminate the need for explicit casts with #as:
+
+    Derived4 :: struct {
+        #as using base : Base;
+        some_bytes : [4] u8 = .[1, 2, 3, 4];
+    }
+
+    d4 : Derived4;
+    inc_x_on_base(*d4); // will now implicitly cast to *Base
+    assert(d4.x == 3);
+
+    // NOTE: to understand the nuance of this next part, see to 250_how_parameters_are_passed.jai
+
+    // In addition to implicit pointer casting, we also get implicit value casting
+    // Notice that print_base takes a Base, not a *Base
+    print_base(d4);
+
+    print_base :: (base : Base) {
+        // can only access fields of Base here
+        print("%\n", base);
+        // Note that base is an immutable argument
+        //base.x += 1000; // not allowed
     }
 
     // TODO: procedures
@@ -421,6 +502,7 @@ main :: () {
     //  Temporary_Storage, reset_temporary_storage
 
     // Things to learn about:
+    //  formatInt
     //  #place
     //  #insert, SoA, AoS
     //  #modify

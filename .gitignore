@@ -1,4 +1,8 @@
+# ignoring all files that don't have file extensions
+# (easy way to exclude linux binaries)
 *
 !*.*
 !*/
+
 .build/
+.*.swp

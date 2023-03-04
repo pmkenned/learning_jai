@@ -417,18 +417,72 @@ main :: () {
     inc_x_on_base(*d4); // will now implicitly cast to *Base
     assert(d4.x == 3);
 
+    // If we have a pointer to the base struct, its useful to be able to
+    // distinguish between different derived structs. In C, you would do
+    // this by creating an enum type and putting that in the base struct.
+    // But in Jai, we can use Type
+
+    Shape :: struct {
+        type : Type;
+        x, y : float;
+    }
+
+    // And then override the type in the derived structs
+
+    Circle :: struct {
+        #as using shape : Shape;
+        type = Circle;
+        radius : float;
+    }
+
+    Square :: struct {
+        #as using shape : Shape;
+        type = Square;
+        side : float;
+    }
+
+    square := Square.{ side = 2 };
+    circle := Circle.{ radius = 3 };
+
+    print("%\n", area(*square));
+    print("%\n", area(*circle));
+
+    area :: (shape : *Shape) -> float {
+        // Now that the Shape struct contains a Type,
+        // we can switch on it
+        if shape.type == {
+            case Circle;
+                circle := cast(*Circle) shape;
+                return circle.radius * circle.radius * 3.14;
+            case Square;
+                square := cast(*Square) shape;
+                return square.side * square.side;
+        }
+        return 0.0;
+    }
+
     // NOTE: to understand the nuance of this next part, see to 250_how_parameters_are_passed.jai
 
     // In addition to implicit pointer casting, we also get implicit value casting
     // Notice that print_base takes a Base, not a *Base
-    print_base(d4);
+    print_shape(square);
 
-    print_base :: (base : Base) {
+    print_shape :: (shape : Shape) {
         // can only access fields of Base here
-        print("%\n", base);
+        print("%\n", shape);
         // Note that base is an immutable argument
-        //base.x += 1000; // not allowed
+        //shape.x += 1000; // not allowed
     }
+
+    my_any : Any;
+    my_any = 3;
+    my_any = 2.5;
+    my_any = true;
+    my_any = int;
+    my_any = Type;
+    my_any = Any;
+    my_any = main;
+    my_any = #type (int, *void) -> ([..] float);
 
     // TODO: procedures
     //  named arguments
@@ -490,25 +544,28 @@ main :: () {
     // TODO:
     //  ifx
     //  operator overloading
-    //  #as
     //  $T: Type
     //  case
     //  enum
     //  Any type
     //  New(), NewArray()
     //  #must
-    //  *void
     //  #c_call
     //  Temporary_Storage, reset_temporary_storage
-
+    //
     // Things to learn about:
     //  formatInt
     //  #place
     //  #insert, SoA, AoS
     //  #modify
+    //  #body_text
     //  #expand
     //  remove
+    //  while, named loops
+    //  for condition evaluated once
+    //  for <
     //  for *
+    //  remove
     //  AST
     //  compiler message loop
     //  stack trace
@@ -517,9 +574,37 @@ main :: () {
     //  build program
     //  for_expansion
     //  if case
-    //  @notes
+    //  notes (@Incomplete, etc.)
     //  serialize
-
+    //  Code, Context
+    //
+    // Modules to learn about:
+    //  File
+    //  String
+    //  Hash_Table
+    //  Random.jai
+    //  Sort.jai
+    //  Math
+    //  Input
+    //  Vulkan
+    //  d3d12
+    //  GL
+    //  Simp
+    //  SDL
+    //  GetRect
+    //  ImGui
+    //  Window_Creation
+    //  X11
+    //  Sound_Player
+    //  Socket
+    //  Process
+    //  POSIX
+    //  Compiler
+    //  Debug
+    //  Mail.jai
+    //  Linux.jai
+    //  Windows.jai
+    //
     // Questions:
     // - How to format print?
     // - Can print be extended for custom types?

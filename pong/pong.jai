@@ -18,7 +18,7 @@ key_down  : u32;
 last_time:  float64;
 dt: float = 0.016667;
 
-PADDLE_OFFSET :: 10;
+PADDLE_OFFSET :: 75;
 PADDLE_WIDTH :: 10;
 PADDLE_HEIGHT :: 100;
 PADDLE_SPEED :: 200.0;
@@ -28,7 +28,7 @@ BALL_WIDTH :: 10;
 
 Paddle :: struct {
     x : float = PADDLE_OFFSET;
-    y : float = 50.0;
+    y : float = #run window_height/2.0 - PADDLE_HEIGHT/2.0;
 }
 
 left_paddle : Paddle;
@@ -42,6 +42,9 @@ Ball :: struct {
 }
 
 ball : Ball;
+
+player1_score : int = 0;
+player2_score : int = 0;
 
 main :: ()
 {
@@ -74,7 +77,7 @@ main :: ()
 
         min_delta := 1.0/MAX_FRAMERATE;
         time_per_loop := max(min_delta, dt);
-        print("%\n", 1.0/time_per_loop);
+        //print("%\n", 1.0/time_per_loop);
         sleep_milliseconds(cast(s32) (time_per_loop - dt));
     }
 }
@@ -90,13 +93,27 @@ simulate :: ()
 
     ball.x += dt*ball.xv;
     ball.y += dt*ball.yv;
+
+    // Collision with paddles
+    handle_paddle_ball_collision(left_paddle, *ball);
+    handle_paddle_ball_collision(right_paddle, *ball);
+
+    // Collision with walls
     if ball.x < 0 {
-        ball.x = 0;
+        ball.x = window_width/2.0;
+        ball.y = window_height/2.0;
+        player2_score += 1;
         ball.xv *= -1;
+
+        print("Player 1:%, Player 2:%\n", player1_score, player2_score);
     }
     if ball.x > cast(float) window_width {
-        ball.x = cast(float) window_width;
+        ball.x = window_width/2.0;
+        ball.y = window_height/2.0;
+        player1_score += 1;
         ball.xv *= -1;
+
+        print("Player 1:%, Player 2:%\n", player1_score, player2_score);
     }
     if ball.y < 0 {
         ball.y = 0;
@@ -135,5 +152,14 @@ simulate :: ()
             if key == .ARROW_DOWN   key_down  = event.key_pressed;
             if key == .ARROW_UP     key_up    = event.key_pressed;
         }
+    }
+}
+
+handle_paddle_ball_collision :: (paddle: Paddle, ball: *Ball)
+{
+    if (ball.x >= paddle.x && ball.x <= paddle.x + PADDLE_WIDTH &&
+        ball.y >= paddle.y && ball.y <= paddle.y + PADDLE_HEIGHT)
+    {
+        ball.xv *= -1;
     }
 }

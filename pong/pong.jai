@@ -20,7 +20,7 @@ dt: float = 0.016667;
 
 PADDLE_OFFSET :: 75;
 PADDLE_WIDTH :: 10;
-PADDLE_HEIGHT :: 100;
+PADDLE_HEIGHT :: 400;
 PADDLE_SPEED :: 200.0;
 
 BALL_HEIGHT :: 10;
@@ -53,8 +53,8 @@ main :: ()
 
     ball.x = cast(float) window_width/2;
     ball.y = cast(float) window_height/2;
-    ball.xv = 500;
-    ball.yv = 500;
+    ball.xv = 250;
+    ball.yv = 250;
 
     right_paddle.x = cast(float) window_width - PADDLE_WIDTH - PADDLE_OFFSET;
 
@@ -125,15 +125,15 @@ simulate :: ()
     }
 
     if key_down
-        left_paddle.y -= dt*PADDLE_SPEED;
+        right_paddle.y -= dt*PADDLE_SPEED;
     if key_up
-        left_paddle.y += dt*PADDLE_SPEED;
+        right_paddle.y += dt*PADDLE_SPEED;
 
-    if left_paddle.y < 0
-        left_paddle.y = 0;
+    if right_paddle.y < 0
+        right_paddle.y = 0;
 
-    if left_paddle.y + PADDLE_HEIGHT > cast(float) window_height
-        left_paddle.y = cast(float) window_height - PADDLE_HEIGHT;
+    if right_paddle.y + PADDLE_HEIGHT > cast(float) window_height
+        right_paddle.y = cast(float) window_height - PADDLE_HEIGHT;
 
     for event : Input.events_this_frame {
         if event.type == .QUIT {
@@ -161,5 +161,15 @@ handle_paddle_ball_collision :: (paddle: Paddle, ball: *Ball)
         ball.y >= paddle.y && ball.y <= paddle.y + PADDLE_HEIGHT)
     {
         ball.xv *= -1;
+
+        incoming_angle := Math.PI - Math.atan(ball.yv/ball.xv);
+        how_high_on_paddle := (ball.y - paddle.y)/paddle.y - 0.5;
+
+        delta_angle := Math.atan(how_high_on_paddle) - Math.PI;
+        final_angle := incoming_angle;
+
+        speed := Math.sqrt(ball.yv * ball.yv + ball.xv * ball.xv);
+        ball.xv = speed * Math.sin(final_angle);
+        ball.yv = speed * Math.cos(final_angle);
     }
 }

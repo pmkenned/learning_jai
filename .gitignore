@@ -3,6 +3,8 @@
 *
 !*.*
 !*/
+*.exe
+*.pdb
 
 .build/
 .*.swp
